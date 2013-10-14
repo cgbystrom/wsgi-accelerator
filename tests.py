@@ -87,6 +87,11 @@ class AcceleratorTestCase(unittest.TestCase):
         self._increment_id()
         self.assertEquals(response_id, self.client.get('/cached?status_code=401').id())
 
+    def test_custom_status_code(self):
+        self.assertEquals(response_id, self.client.get('/cached?status_code=250').id())
+        old_id = self._increment_id()
+        self.assertEquals(old_id, self.client.get('/cached?status_code=250').id())
+
     def test_strip_headers(self):
         r = self.client.get('/cached?set_cookie=true')
         self.assertEquals(response_id, r.id())
