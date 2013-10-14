@@ -98,6 +98,23 @@ class AcceleratorTestCase(unittest.TestCase):
         self.assertEquals(response_id, r.id())
         self.assertIn('Set-Cookie', r.headers)
 
+    def test_etag(self):
+        r = self.client.get('/cached')
+        self.assertEquals(response_id, r.id())
+        self.assertEqual(self.app.cache.etag_hash(r.data), r.headers['ETag'])
+
+        old_id = self._increment_id()
+
+        r = self.client.get('/cached', headers=[('ETag', self.app.cache.etag_hash(r.data))])
+        self.assertEquals(r.status_code, 304)
+        self.assertEquals(r.data, '')
+
+        # Should be cached even without ETag
+        r = self.client.get('/cached')
+        self.assertEquals(r.status_code, 200)
+        self.assertEquals(old_id, r.id())
+
+
 
 if __name__ == '__main__':
     unittest.main()
