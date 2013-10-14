@@ -18,6 +18,7 @@ class TestClientResponse(BaseResponse):
 
 app_code_triggered = False
 response_id = -1 # Used to verify if response is cached or not
+cache_time = 5
 
 app = Flask(__name__)
 app.debug = True
@@ -34,9 +35,11 @@ def uncached():
 
 @app.route("/cached", methods=["GET", "POST"])
 def cached():
-    request.environ['accelerator.cache_for'] = 5
     status_code = request.args.get('status_code', 200)
     set_cookie = request.args.get('set_cookie', 'false')
+    tags = request.args.getlist('tags')
+    request.environ['accelerator.cache_for'] = cache_time
+    request.environ['accelerator.tags'] = tags
 
     resp = make_response(str(response_id), status_code)
     if set_cookie == 'true':
@@ -44,19 +47,21 @@ def cached():
     
     return resp
 
+
 class AcceleratorTestCase(unittest.TestCase):
 
     def setUp(self):
-        self._reset_id()
+        self._reset()
         self.app = accelerator.WSGICache(app)
         self.client = TestClient(self.app, response_wrapper=TestClientResponse)
 
     def tearDown(self):
         pass
 
-    def _reset_id(self):
-        global response_id
+    def _reset(self):
+        global response_id, cache_time
         response_id = 1
+        cache_time = 5
 
     def _increment_id(self):
         global response_id
@@ -119,6 +124,43 @@ class AcceleratorTestCase(unittest.TestCase):
         self.assertEquals(r.status_code, 200)
         self.assertEquals(old_id, r.id())
 
+    def test_tags(self):
+        tag_url = '/cached?tags=foo'
+        self.assertEquals(response_id, self.client.get(tag_url).id())
+        old_id = self._increment_id()
+        self.assertEquals(old_id, self.client.get(tag_url).id())
+        self.app.invalidate_tag(['foo', 'bogus'])
+        self.assertEquals(response_id, self.client.get(tag_url).id())
+
+    def test_multiple_tags(self):
+        global cache_time
+        tag_url1 = '/cached?tags=foo&tags=bar'
+        tag_url2 = '/cached?tags=baz&tags=bar'
+        tag_url3 = '/cached?tags=baz&tags=qux'
+
+        self.assertEquals(response_id, self.client.get(tag_url1).id())
+        self.assertEquals(response_id, self.client.get(tag_url2).id())
+        self.assertEquals(response_id, self.client.get(tag_url3).id())
+
+        old_id = self._increment_id()
+
+        self.assertEquals(old_id, self.client.get(tag_url1).id())
+        self.assertEquals(old_id, self.client.get(tag_url2).id())
+        self.assertEquals(old_id, self.client.get(tag_url3).id())
+
+
+        self.app.invalidate_tag(['bar', 'bogus'])
+        cache_time = -1 # Disable creation of new cache entries
+        self.assertEquals(response_id, self.client.get(tag_url1).id())
+        self.assertEquals(response_id, self.client.get(tag_url2).id())
+        self.assertEquals(old_id, self.client.get(tag_url3).id())
+
+        self.app.invalidate_tag(['qux'])
+        self.assertEquals(response_id, self.client.get(tag_url1).id())
+        self.assertEquals(response_id, self.client.get(tag_url2).id())
+        self.assertEquals(response_id, self.client.get(tag_url3).id())
+
+        self.assertEquals(len(self.app.cache.tags_lookup), 0)
 
 
 if __name__ == '__main__':
