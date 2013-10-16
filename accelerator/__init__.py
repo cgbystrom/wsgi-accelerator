@@ -1,12 +1,11 @@
 from cStringIO import StringIO
-#from accelerator.stores.inmemory import InMemoryCache
 from accelerator.stores import InMemoryCache
 
 
 class WSGICache(object):
-    def __init__(self, app, cache_store=InMemoryCache, ignore_headers=['Set-Cookie']):
+    def __init__(self, app, cache_store=None, ignore_headers=['Set-Cookie']):
         self.app = app
-        self.cache = cache_store()
+        self.cache = InMemoryCache() if not cache_store else cache_store
         self.ignore_headers = set(ignore_headers)
 
     def invalidate_tag(self, tags):

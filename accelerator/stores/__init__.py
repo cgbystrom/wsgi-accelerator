@@ -1,1 +1,2 @@
-from inmemory import InMemoryCache
+from .inmemory import InMemoryCache
+from .redis import RedisCache

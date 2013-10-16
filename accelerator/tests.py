@@ -47,12 +47,12 @@ def cached():
     
     return resp
 
-
-class AcceleratorTestCase(unittest.TestCase):
+class BaseTestCase(unittest.TestCase):
+    cache_store = None # Defaults to InMemoryCache
 
     def setUp(self):
         self._reset()
-        self.app = accelerator.WSGICache(app)
+        self.app = accelerator.WSGICache(app, cache_store=self.cache_store)
         self.client = TestClient(self.app, response_wrapper=TestClientResponse)
 
     def tearDown(self):
@@ -148,7 +148,6 @@ class AcceleratorTestCase(unittest.TestCase):
         self.assertEquals(old_id, self.client.get(tag_url2).id())
         self.assertEquals(old_id, self.client.get(tag_url3).id())
 
-
         self.app.invalidate_tag(['bar', 'bogus'])
         cache_time = -1 # Disable creation of new cache entries
         self.assertEquals(response_id, self.client.get(tag_url1).id())
@@ -160,7 +159,27 @@ class AcceleratorTestCase(unittest.TestCase):
         self.assertEquals(response_id, self.client.get(tag_url2).id())
         self.assertEquals(response_id, self.client.get(tag_url3).id())
 
-        self.assertEquals(len(self.app.cache.tags_lookup), 0)
+        self.assertEquals(len(self.app.cache.get_path_keys_by_tag('foo')), 0)
+        self.assertEquals(len(self.app.cache.get_path_keys_by_tag('bar')), 0)
+        self.assertEquals(len(self.app.cache.get_path_keys_by_tag('baz')), 0)
+        self.assertEquals(len(self.app.cache.get_path_keys_by_tag('qux')), 0)
+
+try:
+    import redis
+    try:
+        r = redis.Redis()
+        r.info()
+
+        class RedisTestCase(BaseTestCase):
+            def setUp(self):
+                r = redis.Redis()
+                r.flushdb()
+                self.cache_store = accelerator.stores.RedisCache(r)
+                super(RedisTestCase, self).setUp()
+    except redis.exceptions.ConnectionError as e:
+        print "Unable to connect to local Redis server, skipping Redis tests"
+except ImportError as ie:
+    print "No Redis library found, skipping Redis tests"
 
 
 if __name__ == '__main__':

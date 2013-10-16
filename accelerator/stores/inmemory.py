@@ -43,6 +43,9 @@ class InMemoryCache(object):
             if len(self.tags_lookup[t]) == 0:
                 del self.tags_lookup[t]
 
+    def get_path_keys_by_tag(self, tag):
+        return self.tags_lookup.get(tag, [])
+
     def invalidate_tag(self, tags):
         keys_with_dirty_tags = {}
         tags_lookup = self.tags_lookup.copy()
