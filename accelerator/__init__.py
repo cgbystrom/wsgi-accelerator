@@ -2,7 +2,7 @@ from cStringIO import StringIO
 from accelerator.stores import InMemoryCache
 
 
-class WSGICache(object):
+class WSGIAccelerator(object):
     def __init__(self, app, cache_store=None, ignore_headers=['Set-Cookie']):
         self.app = app
         self.cache = InMemoryCache() if not cache_store else cache_store

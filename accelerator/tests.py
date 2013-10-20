@@ -52,7 +52,7 @@ class BaseTestCase(unittest.TestCase):
 
     def setUp(self):
         self._reset()
-        self.app = accelerator.WSGICache(app, cache_store=self.cache_store)
+        self.app = accelerator.WSGIAccelerator(app, cache_store=self.cache_store)
         self.client = TestClient(self.app, response_wrapper=TestClientResponse)
 
     def tearDown(self):
