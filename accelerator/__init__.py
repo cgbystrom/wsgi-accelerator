@@ -12,6 +12,7 @@ class WSGICache(object):
         self.cache.invalidate_tag(tags)
 
     def __call__(self, environ, start_response):
+        environ['accelerator'] = self
         cache_key = environ['PATH_INFO'] + environ['QUERY_STRING']
         cache_metadata = self.cache.get(cache_key)
 
