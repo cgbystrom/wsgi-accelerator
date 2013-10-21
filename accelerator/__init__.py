@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+__title__ = 'wsgi-accelerator'
+__version__ = '0.1.0'
+__author__ = 'Carl Byström'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2013 Carl Byström'
+
 from cStringIO import StringIO
 from accelerator.stores import InMemoryCache
 
